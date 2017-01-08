@@ -1,4 +1,4 @@
-CFLAGS = -I../apue.3e/include
+CFLAGS = -Wall  -I../apue.3e/include
 LDFLAGS = -L../apue.3e/lib
 LIBS = -lapue
 
