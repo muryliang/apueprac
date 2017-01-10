@@ -1,11 +1,22 @@
-CFLAGS = -I/home/sora/git/apue_prac/apue.3e/include
-LDFLAGS = -L/home/sora/git/apue_prac/apue.3e/lib
+PWD = $(shell pwd)
+CFLAGS = -Wall  -I$(PWD)/../apue.3e/include
+LDFLAGS = -L$(PWD)/../apue.3e/lib
 LIBS = -lapue
+SUBDIR = fileio
 
-all: 
-	gcc $(CFLAGS) a.c  $(LDFLAGS) $(LIBS)  -o a
+all:
+	@list=$(SUBDIR); for subdir in $$list; do \
+		(cd $$subdir ; $(MAKE)) \
+	done
+
+.PHONY: fileio
+
+fileio: fileio/rwseek
+	@(cd $@ ; $(MAKE))
 
 clean:
-	@rm -f *.o *.ko
+	@list=$(SUBDIR) ; for subdir in $$list ; do \
+	(cd $$subdir; $(MAKE) clean); \
+	done
 
-
+export CFLAGS LDFLAGS LIBS 
