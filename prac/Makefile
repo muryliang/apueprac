@@ -4,20 +4,18 @@ LDFLAGS = -L$(PWD)/../apue.3e/lib
 LIBS = -lapue
 SUBDIR = fileio
 
-EXEC = a 
-all: $(EXEC)
-
-a: a.c 
-	gcc $(CFLAGS) $<  $(LDFLAGS) $(LIBS)  -o $@
+all:
+	@list=$(SUBDIR); for subdir in $$list; do \
+		(cd $$subdir ; $(MAKE)) \
+	done
 
 .PHONY: fileio
 
 fileio: fileio/rwseek
-	(cd $@ ; $(MAKE))
+	@(cd $@ ; $(MAKE))
 
 clean:
-	rm -f *.o *.ko a
-	list=$(SUBDIR) ; for subdir in $$list ; do \
+	@list=$(SUBDIR) ; for subdir in $$list ; do \
 	(cd $$subdir; $(MAKE) clean); \
 	done
 

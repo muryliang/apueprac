@@ -37,6 +37,7 @@
 
 #execs
 a
+rwseek
 
 apue.3e/advio/deadlock
 apue.3e/advio/mandatory
