@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <mydef.h>
 
 int log_to_stderr = 1;
 

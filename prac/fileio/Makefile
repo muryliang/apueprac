@@ -1,11 +1,10 @@
-EXEC = rwseek a
-
+EXEC = rwseek.exe a.exe
 all: $(EXEC)
 
-rwseek: rwseek.c
+rwseek.exe: rwseek.c ../mydef.h
 	gcc $(CFLAGS) $< -o $@ $(LDFLAGS) $(LIBS)
 
-a: a.c 
+a.exe: a.c ../mydef.h
 	gcc $(CFLAGS) $<  $(LDFLAGS) $(LIBS)  -o $@
 
 clean:

@@ -1,5 +1,6 @@
 PWD = $(shell pwd)
 CFLAGS = -Wall  -I$(PWD)/../apue.3e/include
+CFLAGS += -I$(PWD)/
 LDFLAGS = -L$(PWD)/../apue.3e/lib
 LIBS = -lapue
 SUBDIR = fileio
