@@ -162,6 +162,33 @@ void namemax(char *path) {
 	close(fd);
 }
 
+static int openfile(char *name, int flags, mode_t mode) {
+	int fd;
+	if (name == NULL)
+		log_sys("not valid file name specified in %s", __FUNCTION__);
+	if ((fd = open(name, flags, mode)) == -1)
+		err_sys("can not open file %s", name);
+	return fd;
+}
+
+static void closefile(int fd) {
+	int ret = close(fd);
+	if (ret < 0)
+		log_ret("error close fd %d", fd);
+}
+
+void tryseek(int ac, char *av[]) {
+	int fd;
+
+	if (ac != 3)
+		log_sys("should have a filename and a size");
+
+	fd = openfile(av[1], O_CREAT|O_RDWR|O_TRUNC, 0660);
+	lseek(fd, strtol(av[2],NULL, 10), SEEK_SET);
+	write(fd, "stub", 4);
+	printf("extend success file: %s\n", av[1]);
+	closefile(fd);
+}
 
 int main(int ac, char *av[])
 {
@@ -169,9 +196,7 @@ int main(int ac, char *av[])
 	if (signal(SIGINT, sig_int) == SIG_ERR)
 		err_sys("siganl install error");
 //	bare_shell(ac, av);
-//	read_and_trunk(ac, av);
-	if (ac == 2) namemax(av[1]);
-	else log_msg("should have path param");
+	tryseek(ac, av);
 	return 0;
 }
 
