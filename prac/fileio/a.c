@@ -31,7 +31,7 @@ int listdir(int ac, char *av[])
 		err_quit("need a dir name\n");
 
 	dirname = av[1];
-	log_msg("the dirname is %s\n", dirname);
+	log_msg("the dirname is %s", dirname);
 	
 	if ((dp = opendir(dirname)) == NULL)
 		log_quit("can not opendir %s %s\n", dirname, strerror(errno));
@@ -106,12 +106,72 @@ static void sig_int(int sigio)
 	printf("interrupted\n");
 }
 
+void read_and_trunk(int ac, char *av[]) {
+	int fd;
+	char *str = "hello world";
+	char buf[BUFSIZ];
+
+	if (ac != 2) 
+		log_sys("need a file name");
+	if ((fd = open(av[1], O_WRONLY|O_CREAT, 0660)) == -1)
+		log_sys("can not open %s", av[1]);
+	if (write(fd, str, strlen(str)) != strlen(str))
+		log_msg("write not enough");
+	close(fd);
+
+	if ((fd = open(av[1], O_RDONLY)) == -1)
+		log_sys("can not open %s", av[1]);
+	if (read(fd, buf, BUFSIZ) != strlen(str))
+		log_msg("read error");
+
+	printf("string: %s\n", buf);
+	close(fd);
+
+	if ((fd = open(av[1], O_RDWR|O_TRUNC)) == -1) 
+		log_msg("truncate error");
+	memset(buf, 0, sizeof(buf));
+	if (read(fd, buf, sizeof(buf)) != 0)
+		log_msg("unknown msg: %s", buf);
+	close(fd);
+}
+
+void namemax(char *path) {
+	int fd;
+	long res ;
+	char namebuf[BUFSIZ];
+	memset(namebuf, 'a',257);
+	namebuf[254] = '\0';
+	errno = 0;
+	res = pathconf(path, _PC_NAME_MAX);
+	if (res == -1) {
+		if (errno == 0) {
+			printf("no defined namemax\n");
+			return;
+		}
+		else
+			err_sys("get pathconf error");
+	}
+	printf("got namemax %lx\n", res);
+#ifdef _POSIX_NAME_MAX
+	printf("we have defined posix name max\n", _POSIX_NAME_MAX);
+#endif
+	printf("now check too long name\nname: %s\n", namebuf);
+	if ((fd = open(namebuf, O_RDWR|O_CREAT, 0660)) == -1)
+		log_sys("error open file ");
+	return;
+	close(fd);
+}
+
+
 int main(int ac, char *av[])
 {
 
 	if (signal(SIGINT, sig_int) == SIG_ERR)
 		err_sys("siganl install error");
-	bare_shell(ac, av);
+//	bare_shell(ac, av);
+//	read_and_trunk(ac, av);
+	if (ac == 2) namemax(av[1]);
+	else log_msg("should have path param");
 	return 0;
 }
 
