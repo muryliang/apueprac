@@ -1,7 +1,4 @@
 #include <apue.h>
-#include <dirent.h>
-#include <errno.h>
-#include <sys/wait.h>
 #include <mydef.h>
 
 int log_to_stderr = 1;
@@ -138,11 +135,12 @@ void read_and_trunk(int ac, char *av[]) {
 void namemax(char *path) {
 	int fd;
 	long res ;
-	char namebuf[BUFSIZ];
-	memset(namebuf, 'a',257);
-	namebuf[254] = '\0';
+//	char namebuf[BUFSIZ];
+//	memset(namebuf, 'a',257);
+//	namebuf[254] = '\0';
 	errno = 0;
-	res = pathconf(path, _PC_NAME_MAX);
+//	res = pathconf(path, _PC_NAME_MAX);
+	res = pathconf(path, _PC_NO_TRUNC);
 	if (res == -1) {
 		if (errno == 0) {
 			printf("no defined namemax\n");
@@ -153,13 +151,42 @@ void namemax(char *path) {
 	}
 	printf("got namemax %lx\n", res);
 #ifdef _POSIX_NAME_MAX
-	printf("we have defined posix name max\n", _POSIX_NAME_MAX);
+	printf("we have defined posix name max %d\n", _POSIX_NAME_MAX);
 #endif
-	printf("now check too long name\nname: %s\n", namebuf);
-	if ((fd = open(namebuf, O_RDWR|O_CREAT, 0660)) == -1)
-		log_sys("error open file ");
+#ifdef _POSIX_NO_TRUNC
+	printf("we have defined posix no trunc %d\n", _POSIX_NO_TRUNC);
+#endif
+//	printf("now check too long name\nname: %s\n", namebuf);
+//	if ((fd = open(namebuf, O_RDWR|O_CREAT, 0660)) == -1)
+//		log_sys("error open file ");
 	return;
 	close(fd);
+}
+
+static void getsysconf(int ac, char *av[]) {
+	long value;
+	struct rlimit rlp;
+	if (ac < 2) 
+		log_sys("conf name needed");
+
+	memset(&rlp, 0, sizeof(rlp));
+	value = sysconf(_SC_OPEN_MAX);
+	printf("the value of %s is %ld\n", av[1], value);
+	if (-1 == getrlimit(RLIMIT_NOFILE, &rlp))
+			printf("error getlimit\n");
+	printf("nofile of rlimit is %lu %lu\n", rlp.rlim_cur, rlp.rlim_max);
+  #ifdef _FILE_OFFSET_BITS
+	   printf("_FILE_OFFSET_BITS defined: %d\n", _FILE_OFFSET_BITS);
+  #else
+	   printf("nothing\n");
+  #endif
+  #ifdef __USE_FILE_OFFSET64
+	   printf("__USE_FILE_OFFSET64 defined: %d\n", __USE_FILE_OFFSET64);
+  #else
+	   printf("nothing2\n");
+  #endif
+
+	return;
 }
 
 static int openfile(char *name, int flags, mode_t mode) {
@@ -181,7 +208,7 @@ void tryseek(int ac, char *av[]) {
 	int fd;
 
 	if (ac != 3)
-		log_sys("should have a filename and a size");
+		log_quit("should have a filename and a size");
 
 	fd = openfile(av[1], O_CREAT|O_RDWR|O_TRUNC, 0660);
 	lseek(fd, strtol(av[2],NULL, 10), SEEK_SET);
@@ -195,8 +222,11 @@ int main(int ac, char *av[])
 
 	if (signal(SIGINT, sig_int) == SIG_ERR)
 		err_sys("siganl install error");
-//	bare_shell(ac, av);
-	tryseek(ac, av);
+//	getsysconf(ac, av);
+//	namemax(av[1]);
+//	tryseek(ac, av);
+	printf("size of size_t and ssize_t is %lu %lu\n", sizeof(size_t), sizeof(ssize_t));
+	printf("SIZE_MAX %lu\n", SIZE_MAX);
 	return 0;
 }
 
