@@ -7,10 +7,19 @@ static void sig_int(int);
 
 int rw(int ac, char *av[])
 {
-	int n;
-	char buf[BUFSIZ];
+	int n, bufsiz;
+	char *buf;
 
-	while ((n = read(STDIN_FILENO, buf, BUFSIZ)) > 0)
+	if (ac < 2)
+		log_quit("need bufsize");
+		
+	bufsiz = strtol(av[1], NULL, 10);
+	buf = malloc(bufsiz * sizeof(char));
+	if (buf == NULL)
+		log_sys("can not malloc for buf");
+
+	log_msg("buf size now is %d\n", bufsiz);
+	while ((n = read(STDIN_FILENO, buf, bufsiz )) > 0)
 		if (write(STDOUT_FILENO ,buf, n) != n)
 				err_sys("write error");
 
@@ -217,6 +226,57 @@ void tryseek(int ac, char *av[]) {
 	closefile(fd);
 }
 
+void tryappend(int ac, char *av[]) {
+	int fd, n;
+	char buf[BUFSIZ];
+	if (ac != 2)
+		log_quit("should have a filename");
+	fd = openfile(av[1], O_APPEND|O_RDWR, 0660);
+	if (-1 == lseek(fd, SEEK_SET, 4))
+		log_sys("error seek");
+	write(fd, "first string", 12);
+	if (-1 == lseek(fd, 4, SEEK_SET))
+		log_sys("error seek");
+	if (-1 == (n = read(fd, buf, 5)))
+		log_quit("read error");
+	buf[strlen(buf)] = '\0';
+	printf("we have %d count string: %s\n",n, buf);
+	pwrite(fd, "hello", 5, 6);
+	if (-1 == pread(fd, buf, 5, 6))
+		log_msg("can not pread");
+	buf[strlen(buf)] = '\0';
+	printf("we have %d count pread string: %s\n",n, buf);
+	close(fd);
+}
+		
+void tryreopen(int ac, char *av[]) {
+	int fd, fd2;
+	if (ac < 2)
+		log_quit("should have a filename");
+	fd = openfile(av[1], O_RDWR|O_CREAT|O_EXCL, 0660);
+	printf("success a\n");
+	write(fd, "first", 5);
+	close(fd);
+	fd2 = openfile(av[1], O_RDWR|O_CREAT|O_EXCL, 0660);
+	printf("success b\n");
+}
+
+void trydup(int ac, char *av[]) {
+	int fd1, fd2, fd3=8;
+
+	if (ac < 2)
+		log_quit("need a filename");
+	fd1 = open(av[1], O_CREAT|O_RDWR, 0660);
+	printf("open success\n");
+	fd2 = dup(fd1);
+	write(fd2, "dup in a file", 13);
+	dup2(STDOUT_FILENO, fd3);
+	dup2(fd2, STDOUT_FILENO );
+	printf("now in a file\n");
+	dup2(fd3, STDOUT_FILENO);
+	printf("fd1 %d fd2 %d fd3 %d\n", fd1, fd2, fd3);
+}
+
 int main(int ac, char *av[])
 {
 
@@ -225,8 +285,12 @@ int main(int ac, char *av[])
 //	getsysconf(ac, av);
 //	namemax(av[1]);
 //	tryseek(ac, av);
-	printf("size of size_t and ssize_t is %lu %lu\n", sizeof(size_t), sizeof(ssize_t));
-	printf("SIZE_MAX %lu\n", SIZE_MAX);
+//	printf("size of size_t and ssize_t is %lu %lu\n", sizeof(size_t), sizeof(ssize_t));
+//	printf("SIZE_MAX %lu\n", SIZE_MAX);
+//	rw(ac, av);
+//	tryappend(ac, av);
+//	tryreopen(ac, av);
+	trydup(ac, av);
 	return 0;
 }
 
