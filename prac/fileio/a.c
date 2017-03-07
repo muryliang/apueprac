@@ -277,6 +277,37 @@ void trydup(int ac, char *av[]) {
 	printf("fd1 %d fd2 %d fd3 %d\n", fd1, fd2, fd3);
 }
 
+void testfcntl(int ac, char *av[]) {
+	int fd1, fd2, res;
+	char buf[BUFSIZ];
+
+	if (ac != 2)
+		log_quit("need file name");
+
+	fd1 = openfile(av[1], O_CREAT|O_RDWR|O_CLOEXEC, 0660);
+	fd2 = dup(fd1);
+	printf("in parent, fd1 %d fd2 %d\n", fd1, fd2);
+
+	if (-1 == (res = fork()))
+		log_sys("can not fork");
+	else if (res == 0) { //child 
+		printf("in child");
+//		snprintf(buf, 100, "prac/b.exe"
+		execl("./fileio/b.exe", "b.exe", (char*)0);
+		log_sys("can not reach here");
+	} else {
+		printf("in paretn\n");
+		if (-1 == write(fd1, "hello", 5))
+			log_ret("can not parent write fd1");
+		else 
+			printf("success parent write fd1\n");
+		if (-1 == write(fd2, "second", 6))
+			log_ret("can not parent write fd2");
+		else 
+			printf("success parent write fd2\n");
+	}
+}
+
 int main(int ac, char *av[])
 {
 
@@ -290,7 +321,8 @@ int main(int ac, char *av[])
 //	rw(ac, av);
 //	tryappend(ac, av);
 //	tryreopen(ac, av);
-	trydup(ac, av);
+//	trydup(ac, av);
+	testfcntl(ac, av);
 	return 0;
 }
 
