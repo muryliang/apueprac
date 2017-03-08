@@ -285,7 +285,8 @@ void testfcntl(int ac, char *av[]) {
 		log_quit("need file name");
 
 	fd1 = openfile(av[1], O_CREAT|O_RDWR|O_CLOEXEC, 0660);
-	fd2 = dup(fd1);
+//	fd2 = dup(fd1);
+	fd2 = fcntl(fd1, F_DUPFD_CLOEXEC, 0);
 	printf("in parent, fd1 %d fd2 %d\n", fd1, fd2);
 
 	if (-1 == (res = fork()))
@@ -308,6 +309,36 @@ void testfcntl(int ac, char *av[]) {
 	}
 }
 
+void getown(int ac, char *av[]) {
+	int fd;
+	if (ac < 2)
+		log_quit("should have a param");
+	fd = openfile(av[1], O_CREAT|O_TRUNC|O_RDWR, 0660);
+	printf("the own is %d\n", fcntl(fd, F_GETOWN));
+	fcntl(fd, F_SETOWN, getpid());
+	printf("the own is %d\n", fcntl(fd, F_GETOWN));
+}
+
+void fcntlflag(int ac, char *av[]) {
+	int val;
+	assert(ac >=2);
+	
+	val = fcntl(strtol(av[1], NULL, 10), F_GETFL);	
+	switch(val & O_ACCMODE) {
+	case O_RDONLY: printf("rdonly "); break;
+	case O_WRONLY: printf("wronly "); break;
+	case O_RDWR:   printf("rdwr ");   break;
+	default: break;
+	}
+
+	if (val & O_APPEND) printf("append ");
+	else if (val & O_NONBLOCK) printf("nonblock ");
+	else if (val & O_SYNC) printf("sync ");
+	putchar('\n');
+	return;
+}
+
+
 int main(int ac, char *av[])
 {
 
@@ -322,7 +353,9 @@ int main(int ac, char *av[])
 //	tryappend(ac, av);
 //	tryreopen(ac, av);
 //	trydup(ac, av);
-	testfcntl(ac, av);
+//	testfcntl(ac, av);
+//	getown(ac, av);
+	fcntlflag(ac, av);
 	return 0;
 }
 

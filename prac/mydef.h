@@ -1,6 +1,7 @@
 #ifndef SELFDEF_H
 #define SELFDEF_H
 
+#include <assert.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
