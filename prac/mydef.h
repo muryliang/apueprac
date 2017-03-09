@@ -9,5 +9,8 @@
 #include <sys/resource.h>
 #include <stdint.h>
 #define DTPATH "/home/sora/git/apue/data"
+#define BUFFSIZE 4096
+#define FDATASYNC 1
+#define FSYNC    2
 
 #endif 

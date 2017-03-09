@@ -229,23 +229,18 @@ void tryseek(int ac, char *av[]) {
 void tryappend(int ac, char *av[]) {
 	int fd, n;
 	char buf[BUFSIZ];
-	if (ac != 2)
-		log_quit("should have a filename");
-	fd = openfile(av[1], O_APPEND|O_RDWR, 0660);
-	if (-1 == lseek(fd, SEEK_SET, 4))
-		log_sys("error seek");
-	write(fd, "first string", 12);
+	assert (ac >= 2);
+	fd = openfile(av[1], O_APPEND|O_WRONLY, 0660);
 	if (-1 == lseek(fd, 4, SEEK_SET))
 		log_sys("error seek");
-	if (-1 == (n = read(fd, buf, 5)))
-		log_quit("read error");
+	if (-1 == write(fd, "first string", 12))
+		log_sys("write error");
+	if (-1 == lseek(fd, 4, SEEK_SET))
+		log_sys("error seek2");
+	if (-1 ==read(fd, buf, 3))
+		log_sys("can not read");
 	buf[strlen(buf)] = '\0';
-	printf("we have %d count string: %s\n",n, buf);
-	pwrite(fd, "hello", 5, 6);
-	if (-1 == pread(fd, buf, 5, 6))
-		log_msg("can not pread");
-	buf[strlen(buf)] = '\0';
-	printf("we have %d count pread string: %s\n",n, buf);
+	printf("buf is :%s:\n", buf);
 	close(fd);
 }
 		
@@ -338,24 +333,180 @@ void fcntlflag(int ac, char *av[]) {
 	return;
 }
 
+void do_rw_test(char *from, char *to, int flag, int op){
+	int fdf, fdt, n;
+	char buf[BUFFSIZE];
+#ifdef _POSIX_SYNCHRONIZED_IO
+	printf("_POSIX_SYNCHRONIZED_IO isdefined so fdatasync == fsync\n");
+#endif
+	fdf = openfile(from, O_RDONLY, 0660);
+	if (to == NULL)
+		to = "/dev/null";
+	fdt = openfile(to, O_CREAT|O_WRONLY|flag, 0660);
+
+	errno = 0;
+	while (0 != (n = read(fdf, buf, BUFFSIZE))) {
+//		printf("read ");
+		if (n != write(fdt, buf, n))
+			log_sys("write %d to file %s failed", fdt, to);
+//		printf("write\n");
+	}
+	if (errno != 0)
+		log_sys("some error occur during reading");
+	if (op == FDATASYNC)
+		fdatasync(fdt);
+	else if (op == FSYNC)
+		fsync(fdt);
+	printf("success\n");
+	return;
+}
+
+
+void writetest(int ac, char *av[]) {
+	char *file1, *file2;
+	assert(ac >=3 && strlen(av[1]) >= 2);
+	switch(av[1][1]) {
+		case 'n':  //write to null
+			file1 = av[2];
+			do_rw_test(file1, NULL, 0, 0);
+			break;
+		case 'f':  //rw from file normal
+			file1 = av[2];
+			file2 = av[3];
+			do_rw_test(file1, file2, 0, 0);
+			break;
+		case 's': //from file and open with sync
+			file1 = av[2];
+			file2 = av[3];
+			do_rw_test(file1, file2, O_SYNC, 0);
+			break;
+		case 'd': //use fdadasync afterwrite
+			file1 = av[2];
+			file2 = av[3];
+			do_rw_test(file1, file2, 0, FDATASYNC);
+			break;
+		case 'y':
+			file1 = av[2];
+			file2 = av[3];
+			do_rw_test(file1, file2, 0, FSYNC);
+			break;
+		case 'c':
+			file1 = av[2];
+			file2 = av[3];
+			do_rw_test(file1, file2, O_SYNC, FDATASYNC);
+			break;
+		default:
+			log_quit("not know your option");
+			break;
+	}
+}
+
+/*
+ * use close to close and judgement error can only be EBADF
+ *		open first, if fail, then no need to close
+ * use open creat|excl to open exclusive, so will fail if already open
+ *			until return the fd you want, record opened fd during open try
+ *	then close already opened not needed fd
+ */
+void mydup2(int from, int to) {
+	int max = sysconf(_SC_OPEN_MAX);
+	int *stack, tmpfd, i = 0, j;
+	stack = (int*)malloc(sizeof(int)*max);
+	if (stack == NULL) log_sys("can not malloc");
+	if (from == to) return; //same 
+	if (to >= max)  log_quit("overflow fd max than %d", max-1);
+	while ((tmpfd = dup(from)) < to)
+		stack[i++] = tmpfd;
+	close(to);
+	if (-1 == dup(from)) log_sys("can not dup fd %d", from);
+	getchar();
+	for (j = 0; j < i; j++)
+		close(stack[j]);
+}
+	
+void testdup(int ac, char *av[]) {
+	int fd, fd2;
+	assert(ac >=3);
+
+	fd = openfile(av[1], O_CREAT|O_TRUNC|O_RDWR, 0660);
+	fd2 = strtol(av[2], NULL, 10);
+	mydup2(fd, fd2);
+	if (-1 == write(fd, "this is fd1", 11))
+		log_quit("error write fd1 %d", fd);
+	if (-1 == write(fd2, "this is fd2", 11))
+		log_quit("error write fd2 %d", fd2);
+	return;
+}
+
+void print_time(char *str, struct timespec time) {
+	printf(str);
+	printf(" sec %ld, nsec %ld\n", time.tv_sec, time.tv_nsec);
+}
+
+void parse_mode(int mode) {
+	switch(mode & S_IFMT) {
+		case S_IFSOCK: printf("socket ");break;
+		case S_IFLNK: printf("symbolic link ");break;
+		case S_IFREG: printf("regular file ");break;
+		case S_IFBLK: printf("blk dev ");break;
+		case S_IFDIR: printf("dir ");break;
+		case S_IFCHR: printf("char ");break;
+		case S_IFIFO: printf("pipe ");break;
+		default: printf("unknown-file-type "); break;
+	}
+	if (mode & S_ISUID) printf("suid ");
+	if (mode & S_ISGID) printf("sgid ");
+	if (mode & S_ISVTX) printf("svtx ");
+	if (mode & S_IRUSR) printf("read_usr ");
+	if (mode & S_IWUSR) printf("write_usr ");
+	if (mode & S_IXUSR) printf("exec_usr ");
+	if (mode & S_IRGRP) printf("read_grp ");
+	if (mode & S_IWGRP) printf("write_grp ");
+	if (mode & S_IXGRP) printf("exec_grp ");
+	if (mode & S_IROTH) printf("read_oth ");
+	if (mode & S_IWOTH) printf("write_oth ");
+	if (mode & S_IXOTH) printf("exec_oth ");
+	putchar('\n');
+}
+
+
+void print_stat(const struct stat *state) {
+
+	parse_mode((int)state->st_mode);
+	printf("dev_t %lx   ino_t %lu   mode_t %x\n", (unsigned long)state->st_dev, (unsigned long)state->st_ino, (int)state->st_mode);
+	printf("nlink_t %lu   uid_t %lu   gid_t %lu\n", (unsigned long)state->st_nlink, (unsigned long)state->st_uid, (unsigned long)state->st_gid);
+	printf("rdev_t %lx   off_t %ld   blksize_t %ld\n", (unsigned long)state->st_rdev, (long)state->st_size, (long)state->st_blksize);
+	printf("blkcnt_t %ld\n", (unsigned long)state->st_blocks);
+	print_time("atime", state->st_atim);
+	print_time("mtime", state->st_mtim);
+	print_time("ctime", state->st_ctim);
+}
+
+void trystat(int ac, char *av[]) {
+	int fd;
+	struct stat state;
+
+	assert(ac >= 2);
+/*	printf("open with fd\n");
+	fd = openfile(av[1], O_CREAT|O_RDWR, 0660);
+	if (-1 == fstat(fd, &state))
+		log_quit("err when get file state");
+*/
+/*
+	printf("open with filename\n");
+	if (-1 == stat(av[1], &state))
+		log_quit("error when get file state");
+*/
+	printf("open with fstatat\n");
+	if (-1 == fstatat(AT_FDCWD, av[1], &state, AT_SYMLINK_NOFOLLOW))
+		log_quit("error when get file state");
+
+	print_stat(&state);
+}
 
 int main(int ac, char *av[])
 {
-
-	if (signal(SIGINT, sig_int) == SIG_ERR)
-		err_sys("siganl install error");
-//	getsysconf(ac, av);
-//	namemax(av[1]);
-//	tryseek(ac, av);
-//	printf("size of size_t and ssize_t is %lu %lu\n", sizeof(size_t), sizeof(ssize_t));
-//	printf("SIZE_MAX %lu\n", SIZE_MAX);
-//	rw(ac, av);
-//	tryappend(ac, av);
-//	tryreopen(ac, av);
-//	trydup(ac, av);
-//	testfcntl(ac, av);
-//	getown(ac, av);
-	fcntlflag(ac, av);
+	trystat(ac, av);
 	return 0;
 }
 
