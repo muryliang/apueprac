@@ -12,5 +12,6 @@
 #define BUFFSIZE 4096
 #define FDATASYNC 1
 #define FSYNC    2
+#define RWRWRW (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
 #endif 

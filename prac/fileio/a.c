@@ -504,9 +504,53 @@ void trystat(int ac, char *av[]) {
 	print_stat(&state);
 }
 
+void tryaccess(int ac,char *av[]) {
+	char *filename;
+	assert(ac >= 2);
+
+	filename = av[1];
+
+	if (access(filename, R_OK) < 0)
+		err_ret("access error %s", filename);
+	if (open(filename, O_RDONLY) < 0)
+		err_ret("open %s failed", filename);
+}
+
+void trymask(int ac, char *av[]) {
+	int fd;
+	char *filename, *filename2;
+
+	assert(ac >= 3);
+	filename = av[1];
+	filename2 = av[2];
+
+	fd = openfile(filename, O_CREAT|O_RDWR, RWRWRW);
+	close(fd);
+	umask(S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+	fd = openfile(filename2, O_CREAT|O_RDWR, RWRWRW);
+	close(fd);
+}
+
+void trychmod(int ac, char *av[]) {
+	int fd;
+	struct stat st;
+	assert(ac >= 3);
+
+	fd = openfile(av[1], O_CREAT|O_RDWR, 0660);
+	if (fstat(fd, &st) < 0)
+		log_sys("can not get stat");
+	if (fchmod(fd, (st.st_mode & ~S_IXGRP) | S_ISGID) < 0)
+		log_sys("chmod error");
+	if (chmod(av[2], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) < 0)
+		log_sys("chmod error for %s", av[2]);
+}
+
+
 int main(int ac, char *av[])
 {
-	trystat(ac, av);
+//	trystat(ac, av);
+//	trymask(ac, av);
+	trychmod(ac, av);
 	return 0;
 }
 
