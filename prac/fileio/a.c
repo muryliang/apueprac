@@ -537,6 +537,7 @@ void trychmod(int ac, char *av[]) {
 	assert(ac >= 3);
 
 	fd = openfile(av[1], O_CREAT|O_RDWR, 0660);
+	printf("reutrn of pathconf of _PC_CHOWN_RESTRICTED is %d\n", fpathconf(fd, _PC_CHOWN_RESTRICTED));
 	if (fstat(fd, &st) < 0)
 		log_sys("can not get stat");
 	if (fchmod(fd, (st.st_mode & ~S_IXGRP) | S_ISGID) < 0)
@@ -550,7 +551,8 @@ int main(int ac, char *av[])
 {
 //	trystat(ac, av);
 //	trymask(ac, av);
-	trychmod(ac, av);
+//	trychmod(ac, av);
+	tryseek(ac,av);
 	return 0;
 }
 
