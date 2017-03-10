@@ -549,10 +549,10 @@ void trychmod(int ac, char *av[]) {
 
 int main(int ac, char *av[])
 {
-//	trystat(ac, av);
+	trystat(ac, av);
 //	trymask(ac, av);
 //	trychmod(ac, av);
-	tryseek(ac,av);
+//	tryseek(ac,av);
 	return 0;
 }
 
