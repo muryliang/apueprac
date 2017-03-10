@@ -546,13 +546,21 @@ void trychmod(int ac, char *av[]) {
 		log_sys("chmod error for %s", av[2]);
 }
 
+void trylink(int ac, char *av[]) {
+	int fd;
+	assert(ac >= 3);
+
+//	fd = openfile(av[1], O_CREAT|O_RDWR, 0660);
+//	printf("%s created\n", av[1]);
+	linkat(AT_FDCWD, av[1], AT_FDCWD, av[2], AT_SYMLINK_FOLLOW);
+	printf("%s created\n", av[2]);
+}
+
 
 int main(int ac, char *av[])
 {
-	trystat(ac, av);
-//	trymask(ac, av);
-//	trychmod(ac, av);
-//	tryseek(ac,av);
+//	trystat(ac, av);
+	trylink(ac, av);
 	return 0;
 }
 
