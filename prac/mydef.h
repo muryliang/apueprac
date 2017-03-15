@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <stdint.h>
+#include <ftw.h>
 #define DTPATH "/home/sora/git/apue/data"
 #define BUFFSIZE 4096
 #define FDATASYNC 1

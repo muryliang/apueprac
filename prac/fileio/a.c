@@ -556,11 +556,55 @@ void trylink(int ac, char *av[]) {
 	printf("%s created\n", av[2]);
 }
 
+void tryrename(int ac, char *av[]) {
+    char *from = av[1], *to = av[2];
+    assert(ac == 3);
+
+    if (-1 == rename(from, to))
+        log_sys("can not rename");
+    return;
+}
+
+void tryreadlink(int ac, char *av[]) {
+    char buf[20];
+    int n;
+    assert(ac >= 2);
+
+    if (-1 == (n = readlink(av[1], buf, 20)))
+        log_sys("readlink failed");
+    buf[n] = '\0';
+    puts(buf);
+}
+
+int travel(const char *path, const struct stat *st, int flag) {
+    printf ("path: %s, type: ", path);
+    switch (flag) {
+        case FTW_F: printf("file");break;
+        case FTW_D: printf("dir");break;
+        case FTW_DNR: printf("can not read dir");break;
+        case FTW_NS: printf("failed getting stat, but not symbolic\n"); return 0;
+        default: printf("unknown\n"); return 0;
+    }
+    putchar('\n');
+    return 0;
+}
+
+void tryftw(int ac, char *av[]) {
+    char *name ;
+    assert(ac >= 2);
+    name = av[1];
+
+    if (-1 == ftw(name, travel, 1024))
+        log_sys("can not fwt");
+}
 
 int main(int ac, char *av[])
 {
 //	trystat(ac, av);
-	trylink(ac, av);
+//	trylink(ac, av);
+//    tryrename(ac,av);
+//    tryreadlink(ac, av);
+    tryftw(ac, av);
 	return 0;
 }
 
